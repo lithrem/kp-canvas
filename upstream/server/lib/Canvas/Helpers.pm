@@ -172,6 +172,8 @@ sub register {
                 "--\n" .
                 "Canvas CoreBOT";
 
+
+    $app->log->error($message);
     unless( $exception->{message} eq 'render_only' ) {
       $self->mail(
         from    => 'matrix@kororaproject.org',

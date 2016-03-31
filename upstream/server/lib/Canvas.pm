@@ -69,6 +69,10 @@ sub startup {
   # HYPNOTOAD
   $self->app->config(hypnotoad => $config->{hypnotoad} // {} );
 
+  #
+  # OAUTH2
+  $self->plugin(OAuth2 => $config->{oauth2} // {} );
+
   # set default session expiration to 4 hours
   $self->sessions->default_expiration(14400);
 
@@ -80,7 +84,7 @@ sub startup {
   #
   # AUTHENTICATION
   $self->app->log->info('Loading authentication handler.');
-  $self->plugin('authentication' => {
+  $self->plugin('Authentication' => {
     autoload_user   => 0,
     current_user_fn => 'auth_user',
     load_user => sub {
@@ -131,15 +135,35 @@ sub startup {
   });
 
   #
+  # MAIL
+  unless ($config->{mail} && ($config->{mail}{mode} // '') eq 'production') {
+    $self->app->log->info('Loading dummy mail handler for non-production testing.');
+
+    $self->helper('mail' => sub {
+      shift->app->log->debug('Sending MOCK email ' . join "\n", @_);
+    });
+  }
+  else {
+    #$self->app->log->info('Loading production mail (GMail) handler.');
+    #$self->plugin('gmail' => {type => 'text/plain'});
+    $self->app->log->info('Loading production mail handler.');
+    $self->plugin('mail' => {type => 'text/plain'});
+  }
+
+  #
   # HELPERS
   $self->app->log->info('Loading page helpers.');
+
   $self->plugin('Canvas::Helpers');
   #$self->plugin('Canvas::Helpers::Profile');
   $self->plugin('Canvas::Helpers::User');
 
   #
   # MODEL
-  $self->helper(pg => sub { state $pg = Mojo::Pg->new($config->{database}{uri}); });
+  $self->helper(pg => sub {
+    state $pg = Mojo::Pg->new($config->{database}{uri});
+  });
+
   $self->helper('canvas.machines' => sub {
     state $posts = Canvas::Model::Machines->new(pg => shift->pg)
   });
